@@ -15,25 +15,27 @@ public class Router {
   RouterDescription rd = new RouterDescription();
 
   Link[] ports = new Link[4];
-  
-  private ServerSocket serverSocket;
 
   public Router(Configuration config) {
-    this.rd.simulatedIPAddress = config.getString("socs.network.router.ip");
-    this.lsd = new LinkStateDatabase(this.rd);
-    try{//TODO: Should server socket be multithreaded?
-    	this.serverSocket = new ServerSocket(0); //Using 0 an input automatically allocates a port for you
-    	this.rd.processIPAddress = serverSocket.getLocalSocketAddress().toString();
-    	this.rd.processPortNumber = (short) serverSocket.getLocalPort();
-    	
-    	System.out.println("New router instantiated with " + 
-    			"IP " + this.serverSocket.getLocalSocketAddress() + 
-    			" Port: " + this.serverSocket.getLocalPort() +
-    			"Simulated IP Address: " + this.rd.simulatedIPAddress);
-    }catch(Exception e){
-    	System.err.println(e.toString());
+    Thread serverThread;
+
+    try {
+      this.rd.processIPAddress = java.net.InetAddress.getLocalHost().getHostAddress();
+    } catch (Exception e) {
+      System.err.println(e.toString());
     	System.exit(1);
     }
+    this.rd.processPortNumber = config.getShort("socs.network.router.port");
+    this.rd.simulatedIPAddress = config.getString("socs.network.router.ip");
+    this.lsd = new LinkStateDatabase(this.rd);
+    
+    //TODO: Move server spin up code to start function
+    serverThread = new Thread(new ServerHandler(this.rd, this.lsd, this.ports));
+    serverThread.start();
+    System.out.println("New router instantiated with " + 
+      "IP " + this.rd.processIPAddress + 
+    	" Port: " + this.rd.processPortNumber +
+    	"Simulated IP Address: " + this.rd.simulatedIPAddress);
   }
 
   /**
@@ -45,9 +47,13 @@ public class Router {
    */
   private void processAttach(String processIP, short processPort, String simulatedIP, short weight) {
 	  //TODO: Handle the weight input
-	  //Check if there exists an available port or if it is already attached
-	  boolean alreadyAttached = false;
-	  int portIndex = -1;
+    boolean alreadyAttached;
+    int portIndex;
+    RouterDescription remoteRouterDescription;
+
+    //Check if there exists an available port or if it is already attached
+	  alreadyAttached = false;
+	  portIndex = -1;
 	  for (int i = 0; i < this.ports.length && !alreadyAttached && portIndex < 0; i++) {
 		  if (this.ports[i] == null) portIndex = i;
 		  else {
@@ -66,24 +72,19 @@ public class Router {
 	  }
 	  
 	  //Success case
-	  RouterDescription remoteRouterDescription = new RouterDescription(processIP, processPort, simulatedIP);
-	  this.ports[portIndex] = new Link(this.rd, remoteRouterDescription);
-	  Socket clientSocket;
-	    try {
-	      clientSocket = new Socket(processIP, processPort);
-	      //TODO: Handle client socket connection in a multithreaded manner
-
-	    } catch(Exception e){
-	    	System.err.println(e.toString());
-	    	System.exit(1);
-	    }
+	  remoteRouterDescription = new RouterDescription(processIP, processPort, simulatedIP);
+    this.ports[portIndex] = new Link(this.rd, remoteRouterDescription);
   }
 
   /**
    * broadcast Hello to neighbors
    */
   private void processStart() {
-
+    Thread clientThread;
+    
+    for (Link link : ports){
+      clientThread = new Thread(new ClientHandler(lsd, link));
+    }
   }
 
   /**
