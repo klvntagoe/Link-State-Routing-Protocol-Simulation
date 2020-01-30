@@ -4,9 +4,6 @@ import socs.network.util.Configuration;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.net.ServerSocket;
-import java.net.Socket;
-
 
 public class Router {
 
@@ -19,9 +16,9 @@ public class Router {
   public Router(Configuration config) {
     Thread serverThread;
 
-    try {
+    try{
       this.rd.processIPAddress = java.net.InetAddress.getLocalHost().getHostAddress();
-    } catch (Exception e) {
+    }catch (Exception e) {
       System.err.println(e.toString());
     	System.exit(1);
     }
@@ -29,7 +26,6 @@ public class Router {
     this.rd.simulatedIPAddress = config.getString("socs.network.router.ip");
     this.lsd = new LinkStateDatabase(this.rd);
     
-    //TODO: Move server spin up code to start function
     serverThread = new Thread(new ServerHandler(this.rd, this.lsd, this.ports));
     serverThread.start();
     System.out.println("New router instantiated with " + 
@@ -81,9 +77,15 @@ public class Router {
    */
   private void processStart() {
     Thread clientThread;
-    
+
     for (Link link : ports){
-      clientThread = new Thread(new ClientHandler(lsd, link));
+      try{
+        clientThread = new Thread(new ClientHandler(lsd, link));
+        clientThread.start();
+      }catch(IllegalThreadStateException e){
+        System.err.println(e.toString());
+        System.exit(1);
+      }
     }
   }
 

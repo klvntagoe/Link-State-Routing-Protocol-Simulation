@@ -33,7 +33,7 @@ public class LinkStateDatabase {
     lsa.lsaSeqNumber = Integer.MIN_VALUE;
     LinkDescription ld = new LinkDescription();
     ld.linkID = rd.simulatedIPAddress;
-    ld.portNum = -1;
+    ld.portIndex = -1;
     ld.tosMetrics = 0;
     lsa.links.add(ld);
     return lsa;
@@ -45,7 +45,7 @@ public class LinkStateDatabase {
     for (LSA lsa: _store.values()) {
       sb.append(lsa.linkStateID).append("(" + lsa.lsaSeqNumber + ")").append(":\t");
       for (LinkDescription ld : lsa.links) {
-        sb.append(ld.linkID).append(",").append(ld.portNum).append(",").
+        sb.append(ld.linkID).append(",").append(ld.portIndex).append(",").
                 append(ld.tosMetrics).append("\t");
       }
       sb.append("\n");
