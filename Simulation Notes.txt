@@ -1,0 +1,5 @@
+Bugs:
+
+Observations:
+- SHOULD BE USING SEMAPHORES FOR CRITICAL SECTIONS
+- Sockets instantiated by serverSocket.accept() are never closed

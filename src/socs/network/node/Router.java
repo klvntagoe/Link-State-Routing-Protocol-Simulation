@@ -62,20 +62,20 @@ public class Router {
 	  alreadyAttached = false;
 	  portIndex = -1;
 	  for (int i = 0; i < this.ports.length && !alreadyAttached && portIndex < 0; i++) {
-		  if (this.ports[i] == null) portIndex = i;
-		  else {
-			  if (this.ports[i].router2.simulatedIPAddress.equals(simulatedIP)) alreadyAttached = true;
-		  }
+      if (this.ports[i] == null)
+        portIndex = i;
+      else if (this.ports[i].router2.simulatedIPAddress.equals(simulatedIP))
+        alreadyAttached = true;
 	  }
 	  
 	  //Failure cases for the above
+	  if (alreadyAttached) {
+      System.out.println(simulatedIP + " is already attached to this router");
+      return;
+    }
 	  if (portIndex == -1) {
 		  System.out.println("This router has no more ports available.");
 		  return;
-	  }
-	  if (alreadyAttached) {
-	      System.out.println(simulatedIP + " is already attached to this router");
-	      return;
 	  }
 	  
 	  //Success case
@@ -95,6 +95,7 @@ public class Router {
 
     for (Link link : ports){
       if (link != null){
+        if (link.router2.status == RouterStatus.TWO_WAY) continue;
         try{
           clientThread = new Thread(new ClientHandler(lsd, link));
           clientThread.start();

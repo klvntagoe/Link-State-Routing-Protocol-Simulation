@@ -68,7 +68,7 @@ public class ServerHandler implements Runnable {
                 }
 
                 //Create link then set remote router status to INIT
-                portIndex = findAvailablePort(newClient);
+                portIndex = FindAvailablePort(newClient);
                 newLink = new Link(this._rd, newClient);
                 this._ports[portIndex] = newLink;
                 newLink.router2.status = RouterStatus.INIT;
@@ -115,7 +115,7 @@ public class ServerHandler implements Runnable {
         return LinkAvailabilityType.PORTS_FULL;
     }
 
-    public short findAvailablePort(RouterDescription remoteRouter) {
+    public short FindAvailablePort(RouterDescription remoteRouter) {
         boolean alreadyAttached = false;
         short portIndex = -1;
         for (short i = 0; i < this._ports.length && !alreadyAttached && portIndex < 0; i++) {

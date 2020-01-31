@@ -29,6 +29,7 @@ public class Server implements Runnable {
         server = null;
         _serverIsRunning = true; 
         while(_serverIsRunning){
+            if (NumberOfConnectedPorts() >= this._ports.length) continue;
             try {
                 server = _serverSocket.accept();
                 //TODO: PRINT SOMETHING HERE
@@ -40,5 +41,13 @@ public class Server implements Runnable {
                 System.exit(1);
             }
         }
+    }
+
+    public int NumberOfConnectedPorts(){
+        int numConnectedPorts = 0;
+        for (Link link : this._ports){
+            if (link != null) numConnectedPorts++;
+        }
+        return numConnectedPorts;
     }
 }
