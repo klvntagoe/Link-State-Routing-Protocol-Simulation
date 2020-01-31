@@ -46,13 +46,13 @@ public class ServerHandler implements Runnable {
             newClient = new RouterDescription(firstHelloMessageRecieved.srcProcessIP, firstHelloMessageRecieved.srcProcessPort, firstHelloMessageRecieved.srcIP);
             linkAvailability = determineLinkResult(newClient);
             if (linkAvailability == LinkAvailabilityType.PORTS_FULL){
-                System.out.println("Link process cancelled for " + 
+                System.out.println("Linking process cancelled for " + 
                     firstHelloMessageRecieved.srcIP + 
                     ". There are either no available ports");
                 _socket.close();
                 return;
             }else if (linkAvailability == LinkAvailabilityType.ALREADY_ATTACHED){
-                System.out.println("Link process cancelled for " + 
+                System.out.println("Linking process cancelled for " + 
                     firstHelloMessageRecieved.srcIP + 
                     ". This link or it is already attached");
                 _socket.close();

@@ -29,9 +29,6 @@ public class ClientHandler implements Runnable {
 
         try{
             _clientSocket = new Socket(_link.router2.processIPAddress, _link.router2.processPortNumber);
-            System.out.println(this._link.router1.simulatedIPAddress + 
-                " is now linked to " + 
-                this._link.router2.simulatedIPAddress);
             
             out = new ObjectOutputStream(_clientSocket.getOutputStream());
             in = new ObjectInputStream(_clientSocket.getInputStream());
@@ -58,6 +55,10 @@ public class ClientHandler implements Runnable {
             //Send Second Hello
             out.writeObject(helloMessageToSend);
             
+            System.out.println(this._link.router1.simulatedIPAddress + 
+                " is now linked to " + 
+                this._link.router2.simulatedIPAddress);
+                
             //Synchronize link state databases
             _clientIsRunning = true;
             while(_clientIsRunning){

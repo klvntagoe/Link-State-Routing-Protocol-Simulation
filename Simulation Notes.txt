@@ -1,4 +1,33 @@
+To compile:
+mvn compile assembly:single
+
+To spawn respective routers:
+java -jar target/COMP535-1.0-SNAPSHOT-jar-with-dependencies.jar conf/router1.conf
+java -jar target/COMP535-1.0-SNAPSHOT-jar-with-dependencies.jar conf/router2.conf
+java -jar target/COMP535-1.0-SNAPSHOT-jar-with-dependencies.jar conf/router3.conf
+java -jar target/COMP535-1.0-SNAPSHOT-jar-with-dependencies.jar conf/router4.conf
+java -jar target/COMP535-1.0-SNAPSHOT-jar-with-dependencies.jar conf/router5.conf
+java -jar target/COMP535-1.0-SNAPSHOT-jar-with-dependencies.jar conf/router6.conf
+
+Cases Handled:
+- Router initialization spawns a server
+- Server can attach to multiple clients concurrently
+- Attach process updates the link array
+- Neigbors
+- Start process spawns clients
+- Start process updates link array from client POV
+- Start process updates a link array from server POV
+
+Edge Cases Handled:
+- Router attaching to a server that it is already attached to (duplicating a directed edge)
+- Router attaching to a server that is already its client (making a 2 node cycle)
+- Start process with no new attachments
+- Router attaching to a server with no free ports
+
 Bugs:
+- Client tries to attach to a server who has no free ports
+		- Either throws exception or fully attaches
+		- Neighbor count is increased
 
 Observations:
 - SHOULD BE USING SEMAPHORES FOR CRITICAL SECTIONS
