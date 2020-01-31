@@ -1,9 +1,7 @@
 package socs.network.node;
 
-import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.net.ServerSocket;
 import java.net.Socket;
 
 import socs.network.message.SOSPFPacket;
@@ -17,58 +15,66 @@ public class ServerHandler implements Runnable {
 
     private Link[] _ports;
 
-    private ServerSocket _serverSocket;
+    private Socket _socket;
 
-    private boolean _serverIsRunning = false;
+    private boolean _serverHandlerIsRunning = false;
     
-    public ServerHandler(RouterDescription rd, LinkStateDatabase lsd, Link[] ports){
+    public ServerHandler(Socket socket, RouterDescription rd, LinkStateDatabase lsd, Link[] ports){
         this._rd = rd;
         this._lsd = lsd;
         this._ports = ports;
+        this._socket = socket;
     }
 
     public void run(){
 
         Link newLink;
+        LinkAvailabilityType linkAvailability;
         ObjectInputStream in;
         ObjectOutputStream out;
         RouterDescription newClient;
         short portIndex;
-        Socket server;
         SOSPFPacket firstHelloMessageRecieved, secondHelloMessageRecieved, helloMessageToSend;
-
+        
         try{
-            this._serverSocket = new ServerSocket(this._rd.processPortNumber);
-            _serverIsRunning = true;    //Will only be reached if no exception is caught
-        } catch(Exception e){
-            System.err.println(e.toString());
-            System.exit(1);
-        }
+            in = new ObjectInputStream(_socket.getInputStream());
+            out = new ObjectOutputStream(_socket.getOutputStream());
 
-        server = null;
-        while(_serverIsRunning){
-            try {
-                server = _serverSocket.accept();
-                //TODO: PRINT SOMETHING HERE
-
-                in = new ObjectInputStream(server.getInputStream());
-                out = new ObjectOutputStream(server.getOutputStream());
-
-                //Recieve First Hello, create link, set remote router to INIT
-                firstHelloMessageRecieved = (SOSPFPacket) in.readObject();
-                newClient = new RouterDescription(firstHelloMessageRecieved.srcProcessIP, firstHelloMessageRecieved.srcProcessPort, firstHelloMessageRecieved.srcIP);
-                portIndex = findAvailablePort(newClient);
-                if (portIndex == -1){
-                    //TODO: PRINT SOMETHING HERE
-                    System.out.println();
-                    continue;
+            //Recieve First Hello
+            firstHelloMessageRecieved = (SOSPFPacket) in.readObject();
+            System.out.println("Recieved HELLO from " + firstHelloMessageRecieved.srcIP);
+            newClient = new RouterDescription(firstHelloMessageRecieved.srcProcessIP, firstHelloMessageRecieved.srcProcessPort, firstHelloMessageRecieved.srcIP);
+            linkAvailability = determineLinkResult(newClient);
+            if (linkAvailability == LinkAvailabilityType.PORTS_FULL){
+                System.out.println("Link process cancelled for " + 
+                    firstHelloMessageRecieved.srcIP + 
+                    ". There are either no available ports");
+                _socket.close();
+                return;
+            }else if (linkAvailability == LinkAvailabilityType.ALREADY_ATTACHED){
+                System.out.println("Link process cancelled for " + 
+                    firstHelloMessageRecieved.srcIP + 
+                    ". This link or it is already attached");
+                _socket.close();
+                return;
+            }else if (linkAvailability == LinkAvailabilityType.AVAILABLE_PORT){
+                //Find available port
+                portIndex = -1;
+                for (short i = 0; i < this._ports.length; i++){
+                    if (this._ports[i] == null){
+                        portIndex = i;
+                        break;
+                    }
                 }
+
+                //Create link then set remote router status to INIT
+                portIndex = findAvailablePort(newClient);
                 newLink = new Link(this._rd, newClient);
                 this._ports[portIndex] = newLink;
                 newLink.router2.status = RouterStatus.INIT;
-                //TODO: PRINT SOMETHING HERE
+                System.out.println("Set " + firstHelloMessageRecieved.srcIP + " state to INIT");
 
-                //Send First Hello
+                //Send first HELLO
                 helloMessageToSend = new SOSPFPacket();
                 helloMessageToSend.srcProcessIP = newLink.router1.processIPAddress;
                 helloMessageToSend.srcProcessPort = newLink.router1.processPortNumber;
@@ -78,35 +84,45 @@ public class ServerHandler implements Runnable {
                 helloMessageToSend.routerID = newLink.router1.simulatedIPAddress;
                 helloMessageToSend.neighborID = newLink.router1.simulatedIPAddress;
                 out.writeObject(helloMessageToSend);
-                //TODO: PRINT SOMETHING HERE
 
-                //Recieve Second Hello, set remote router to TWO_WAY
+                //Recieve second HELLO
                 secondHelloMessageRecieved = (SOSPFPacket) in.readObject();
-                newLink.router2.status = RouterStatus.TWO_WAY;
-                //TODO: PRINT SOMETHING HERE
+                System.out.println("Recieved HELLO from " + secondHelloMessageRecieved.srcIP);
 
-            } catch (Exception e){
-                System.err.println(e.toString());
-                System.exit(1);
+                //set remote router to TWO_WAY
+                newLink.router2.status = RouterStatus.TWO_WAY;
+                System.out.println("Set " + secondHelloMessageRecieved.srcIP + " state to TWO_WAY");
             }
-        }
-        //TODO: should server.close() be placed here?
-        try{
-            this._serverSocket.close();
-        }catch(IOException e){
+
+            _serverHandlerIsRunning = true;
+            while(_serverHandlerIsRunning){
+                _serverHandlerIsRunning = false;
+            }
+            _socket.close();
+        }catch (Exception e){
             System.err.println(e.toString());
-              System.exit(1);
+            System.exit(1);
         }
+    }
+
+    public LinkAvailabilityType determineLinkResult(RouterDescription remoteRouter) {
+        for (short i = 0; i < this._ports.length; i++) {
+            if (this._ports[i] == null) 
+                return LinkAvailabilityType.AVAILABLE_PORT;
+            else if (this._ports[i].router2.simulatedIPAddress.equals(remoteRouter.simulatedIPAddress)) 
+                return LinkAvailabilityType.ALREADY_ATTACHED;
+        }
+        return LinkAvailabilityType.PORTS_FULL;
     }
 
     public short findAvailablePort(RouterDescription remoteRouter) {
         boolean alreadyAttached = false;
         short portIndex = -1;
         for (short i = 0; i < this._ports.length && !alreadyAttached && portIndex < 0; i++) {
-            if (this._ports[i] == null) portIndex = i;
-            else {
-                if (this._ports[i].router2.simulatedIPAddress.equals(remoteRouter.simulatedIPAddress)) alreadyAttached = true;
-            }
+            if (this._ports[i] == null) 
+                portIndex = i;
+            else if (this._ports[i].router2.simulatedIPAddress.equals(remoteRouter.simulatedIPAddress)) 
+                alreadyAttached = true;
         }
         return portIndex;
     }

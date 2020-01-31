@@ -1,0 +1,3 @@
+Simulation Issues
+- Cannot link to more than 1 router
+- If you attach to a router and start multiple times, the client handler will hang (server will cancel and client is left waiting for hello reply)

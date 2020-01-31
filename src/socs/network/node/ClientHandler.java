@@ -36,7 +36,7 @@ public class ClientHandler implements Runnable {
             out = new ObjectOutputStream(_clientSocket.getOutputStream());
             in = new ObjectInputStream(_clientSocket.getInputStream());
 
-            //Send first Hello
+            //Send First Hello
             helloMessageToSend = new SOSPFPacket();
             helloMessageToSend.srcProcessIP = this._link.router1.processIPAddress;
             helloMessageToSend.srcProcessPort = this._link.router1.processPortNumber;
@@ -47,19 +47,21 @@ public class ClientHandler implements Runnable {
             helloMessageToSend.neighborID = this._link.router1.simulatedIPAddress;
             out.writeObject(helloMessageToSend);
 
-            //Recieve First Hello, set remote router to TWO_WAY
+            //Recieve First Hello
             helloMessageRecieved = (SOSPFPacket) in.readObject();
             System.out.println("Recieved HELLO from " + helloMessageRecieved.srcIP);
+
+            //Set remote router status to TWO_WAY
             this._link.router2.status = RouterStatus.TWO_WAY;
             System.out.println("Set " + helloMessageRecieved.srcIP + " state to TWO_WAY");
             
-            //Send first Hello
+            //Send Second Hello
             out.writeObject(helloMessageToSend);
             
             //Synchronize link state databases
             _clientIsRunning = true;
             while(_clientIsRunning){
-
+                _clientIsRunning = false;
             }
             _clientSocket.close();
         }catch(Exception e){

@@ -4,6 +4,7 @@ import socs.network.util.Configuration;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.net.ServerSocket;
 
 public class Router {
 
@@ -13,25 +14,35 @@ public class Router {
 
   Link[] ports = new Link[4];
 
+  private ServerSocket _serverSocket;
+
   public Router(Configuration config) {
+    short port;
     Thread serverThread;
+
+    
+    this.rd.simulatedIPAddress = config.getString("socs.network.router.ip");
+
+    port = (short) (Math.random() * 5000);
+    this.rd.processPortNumber = port;
 
     try{
       this.rd.processIPAddress = java.net.InetAddress.getLocalHost().getHostAddress();
-    }catch (Exception e) {
+      this._serverSocket = new ServerSocket(port);
+    }catch(Exception e){
       System.err.println(e.toString());
-    	System.exit(1);
+      System.exit(1);
     }
-    this.rd.processPortNumber = config.getShort("socs.network.router.port");
-    this.rd.simulatedIPAddress = config.getString("socs.network.router.ip");
+
     this.lsd = new LinkStateDatabase(this.rd);
     
-    serverThread = new Thread(new ServerHandler(this.rd, this.lsd, this.ports));
+    serverThread = new Thread(new Server(this._serverSocket, this.rd, this.lsd, this.ports));
     serverThread.start();
+
     System.out.println("New router instantiated with " + 
       "IP " + this.rd.processIPAddress + 
-    	" Port: " + this.rd.processPortNumber +
-    	"Simulated IP Address: " + this.rd.simulatedIPAddress);
+    	", Port: " + this.rd.processPortNumber +
+    	", Simulated IP Address: " + this.rd.simulatedIPAddress);
   }
 
   /**
@@ -59,7 +70,7 @@ public class Router {
 	  
 	  //Failure cases for the above
 	  if (portIndex == -1) {
-		  System.out.println("This router (" + this.rd.simulatedIPAddress + ") has no more ports available.");
+		  System.out.println("This router has no more ports available.");
 		  return;
 	  }
 	  if (alreadyAttached) {
@@ -70,6 +81,10 @@ public class Router {
 	  //Success case
 	  remoteRouterDescription = new RouterDescription(processIP, processPort, simulatedIP);
     this.ports[portIndex] = new Link(this.rd, remoteRouterDescription);
+
+    System.out.println(this.rd.simulatedIPAddress +
+      " is now attached to  " + 
+      remoteRouterDescription.simulatedIPAddress);
   }
 
   /**
@@ -79,12 +94,14 @@ public class Router {
     Thread clientThread;
 
     for (Link link : ports){
-      try{
-        clientThread = new Thread(new ClientHandler(lsd, link));
-        clientThread.start();
-      }catch(IllegalThreadStateException e){
-        System.err.println(e.toString());
-        System.exit(1);
+      if (link != null){
+        try{
+          clientThread = new Thread(new ClientHandler(lsd, link));
+          clientThread.start();
+        }catch(Exception e){
+          System.err.println(e.toString());
+          System.exit(1);
+        }
       }
     }
   }
@@ -126,7 +143,21 @@ public class Router {
    * output the neighbors of the routers
    */
   private void processNeighbors() {
-
+    int neigborCount = 0;
+    try{
+      for (Link link : this.ports){
+        if (link != null){
+          neigborCount++;
+          System.out.println("IP Address of Neigbor " + 
+            neigborCount + 
+            ": " + 
+            link.router2.simulatedIPAddress);
+        }
+      }
+    }catch(Exception e){  //In case remote router decriptions is null
+      System.err.println(e.toString());
+      System.exit(1);
+    }
   }
 
   /**
