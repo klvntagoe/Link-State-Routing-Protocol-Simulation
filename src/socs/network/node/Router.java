@@ -94,16 +94,35 @@ public class Router {
     Thread clientThread;
 
     for (Link link : ports){
-      if (link != null){
-        if (link.router2.status == RouterStatus.TWO_WAY) continue;
-        try{
-          clientThread = new Thread(new ClientHandler(lsd, link));
-          clientThread.start();
-        }catch(Exception e){
-          System.err.println(e.toString());
-          System.exit(1);
-        }
+      if (link == null) continue;
+      if (link.router2.status == RouterStatus.TWO_WAY) continue;
+      try{
+        clientThread = new Thread(new ClientHandler(lsd, link));
+        clientThread.start();
+      }catch(Exception e){
+        System.err.println(e.toString());
+        System.exit(1);
       }
+    }
+  }
+
+  /**
+   * output the neighbors of the routers
+   */
+  private void processNeighbors() {
+    int neigborCount = 0;
+    try{
+      for (Link link : this.ports){
+        if (link == null) continue;
+        if (link.router2.status != RouterStatus.TWO_WAY) continue;
+        neigborCount++;
+        System.out.println("IP Address of Neigbor " + 
+          neigborCount + ": " + 
+          link.router2.simulatedIPAddress);
+      }
+    }catch(Exception e){  //In case remote router decriptions is null
+      System.err.println(e.toString());
+      System.exit(1);
     }
   }
 
@@ -138,27 +157,6 @@ public class Router {
   private void processConnect(String processIP, short processPort,
                               String simulatedIP, short weight) {
 
-  }
-
-  /**
-   * output the neighbors of the routers
-   */
-  private void processNeighbors() {
-    int neigborCount = 0;
-    try{
-      for (Link link : this.ports){
-        if (link != null){
-          neigborCount++;
-          System.out.println("IP Address of Neigbor " + 
-            neigborCount + 
-            ": " + 
-            link.router2.simulatedIPAddress);
-        }
-      }
-    }catch(Exception e){  //In case remote router decriptions is null
-      System.err.println(e.toString());
-      System.exit(1);
-    }
   }
 
   /**

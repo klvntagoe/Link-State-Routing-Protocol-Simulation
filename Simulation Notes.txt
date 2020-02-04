@@ -26,8 +26,8 @@ Edge Cases Handled:
 
 Bugs:
 - Client tries to attach to a server who has no free ports
-		- Either throws exception or fully attaches
-		- Neighbor count is increased
+    - Throws an IOException at first attempt
+    - No action occurs after first attempt
 
 Observations:
 - SHOULD BE USING SEMAPHORES FOR CRITICAL SECTIONS

@@ -29,7 +29,7 @@ public class ServerHandler implements Runnable {
     public void run(){
 
         Link newLink;
-        LinkAvailabilityType linkAvailability;
+        ConnectionAvailability linkAvailability;
         ObjectInputStream in;
         ObjectOutputStream out;
         RouterDescription newClient;
@@ -44,20 +44,20 @@ public class ServerHandler implements Runnable {
             firstHelloMessageRecieved = (SOSPFPacket) in.readObject();
             System.out.println("Recieved HELLO from " + firstHelloMessageRecieved.srcIP);
             newClient = new RouterDescription(firstHelloMessageRecieved.srcProcessIP, firstHelloMessageRecieved.srcProcessPort, firstHelloMessageRecieved.srcIP);
-            linkAvailability = determineLinkResult(newClient);
-            if (linkAvailability == LinkAvailabilityType.PORTS_FULL){
+            linkAvailability = determineLinkAvailability(newClient);
+            if (linkAvailability == ConnectionAvailability.PORTS_FULL){
                 System.out.println("Linking process cancelled for " + 
                     firstHelloMessageRecieved.srcIP + 
-                    ". There are either no available ports");
+                    ". There are no available ports");
                 _socket.close();
                 return;
-            }else if (linkAvailability == LinkAvailabilityType.ALREADY_ATTACHED){
+            }else if (linkAvailability == ConnectionAvailability.ALREADY_ATTACHED){
                 System.out.println("Linking process cancelled for " + 
                     firstHelloMessageRecieved.srcIP + 
                     ". This link or it is already attached");
                 _socket.close();
                 return;
-            }else if (linkAvailability == LinkAvailabilityType.AVAILABLE_PORT){
+            }else if (linkAvailability == ConnectionAvailability.AVAILABLE_PORT){
                 //Find available port
                 portIndex = -1;
                 for (short i = 0; i < this._ports.length; i++){
@@ -68,7 +68,6 @@ public class ServerHandler implements Runnable {
                 }
 
                 //Create link then set remote router status to INIT
-                portIndex = FindAvailablePort(newClient);
                 newLink = new Link(this._rd, newClient);
                 this._ports[portIndex] = newLink;
                 newLink.router2.status = RouterStatus.INIT;
@@ -105,14 +104,14 @@ public class ServerHandler implements Runnable {
         }
     }
 
-    public LinkAvailabilityType determineLinkResult(RouterDescription remoteRouter) {
+    public ConnectionAvailability determineLinkAvailability(RouterDescription remoteRouter) {
         for (short i = 0; i < this._ports.length; i++) {
             if (this._ports[i] == null) 
-                return LinkAvailabilityType.AVAILABLE_PORT;
+                return ConnectionAvailability.AVAILABLE_PORT;
             else if (this._ports[i].router2.simulatedIPAddress.equals(remoteRouter.simulatedIPAddress)) 
-                return LinkAvailabilityType.ALREADY_ATTACHED;
+                return ConnectionAvailability.ALREADY_ATTACHED;
         }
-        return LinkAvailabilityType.PORTS_FULL;
+        return ConnectionAvailability.PORTS_FULL;
     }
 
     public short FindAvailablePort(RouterDescription remoteRouter) {

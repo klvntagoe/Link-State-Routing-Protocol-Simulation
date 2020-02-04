@@ -54,10 +54,6 @@ public class ClientHandler implements Runnable {
             
             //Send Second Hello
             out.writeObject(helloMessageToSend);
-            
-            System.out.println(this._link.router1.simulatedIPAddress + 
-                " is now linked to " + 
-                this._link.router2.simulatedIPAddress);
                 
             //Synchronize link state databases
             _clientIsRunning = true;

@@ -32,8 +32,6 @@ public class Server implements Runnable {
             if (NumberOfConnectedPorts() >= this._ports.length) continue;
             try {
                 server = _serverSocket.accept();
-                //TODO: PRINT SOMETHING HERE
-
                 clientServiceThread = new Thread(new ServerHandler(server, this._rd, this._lsd, this._ports));
                 clientServiceThread.start();
             } catch (Exception e){
