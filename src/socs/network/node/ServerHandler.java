@@ -3,38 +3,35 @@ package socs.network.node;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.util.HashMap;
 
+import socs.network.message.LSA;
 import socs.network.message.SOSPFPacket;
 import socs.network.message.SOSPFType;
 
-public class ServerHandler implements Runnable {
+public class ServerHandler extends Handler {
 
     private RouterDescription _rd;
-    
-    private LinkStateDatabase _lsd;
-
-    private Link[] _ports;
 
     private Socket _socket;
 
     private boolean _serverHandlerIsRunning = false;
     
     public ServerHandler(Socket socket, RouterDescription rd, LinkStateDatabase lsd, Link[] ports){
+        super(lsd, ports);
         this._rd = rd;
-        this._lsd = lsd;
-        this._ports = ports;
         this._socket = socket;
     }
 
     public void run(){
 
-        Link newLink;
+        Link link;
         ConnectionAvailability linkAvailability;
         ObjectInputStream in;
         ObjectOutputStream out;
         RouterDescription newClient;
-        short portIndex;
         SOSPFPacket firstHelloMessageRecieved, secondHelloMessageRecieved, helloMessageToSend;
+        SOSPFPacket lsaUpdatePacket, outgoingPacket, incomingPacket;
         
         try{
             in = new ObjectInputStream(_socket.getInputStream());
@@ -42,7 +39,9 @@ public class ServerHandler implements Runnable {
 
             //Recieve First Hello
             firstHelloMessageRecieved = (SOSPFPacket) in.readObject();
-            System.out.println("Recieved HELLO from " + firstHelloMessageRecieved.srcIP);
+            if (firstHelloMessageRecieved.sospfType != SOSPFType.HELLO) throw new Exception("First HELLO message was never recieved");
+            else System.out.println("Recieved HELLO from " + firstHelloMessageRecieved.srcIP);
+            
             newClient = new RouterDescription(firstHelloMessageRecieved.srcProcessIP, firstHelloMessageRecieved.srcProcessPort, firstHelloMessageRecieved.srcIP);
             linkAvailability = determineLinkAvailability(newClient);
             if (linkAvailability == ConnectionAvailability.PORTS_FULL){
@@ -58,46 +57,80 @@ public class ServerHandler implements Runnable {
                 _socket.close();
                 return;
             }else if (linkAvailability == ConnectionAvailability.AVAILABLE_PORT){
-                //Find available port
-                portIndex = -1;
-                for (short i = 0; i < this._ports.length; i++){
-                    if (this._ports[i] == null){
-                        portIndex = i;
-                        break;
-                    }
-                }
-
                 //Create link then set remote router status to INIT
-                newLink = new Link(this._rd, newClient);
-                this._ports[portIndex] = newLink;
-                newLink.router2.status = RouterStatus.INIT;
+                link = new Link(this._rd, newClient, firstHelloMessageRecieved.cost);
+                this._ports[this._linkIndex] = link;
+                link.router2.status = RouterStatus.INIT;
                 System.out.println("Set " + firstHelloMessageRecieved.srcIP + " state to INIT");
 
                 //Send first HELLO
-                helloMessageToSend = new SOSPFPacket();
-                helloMessageToSend.srcProcessIP = newLink.router1.processIPAddress;
-                helloMessageToSend.srcProcessPort = newLink.router1.processPortNumber;
-                helloMessageToSend.srcIP = newLink.router1.simulatedIPAddress;
-                helloMessageToSend.dstIP = newLink.router2.simulatedIPAddress;
-                helloMessageToSend.sospfType = SOSPFType.HELLO;
-                helloMessageToSend.routerID = newLink.router1.simulatedIPAddress;
-                helloMessageToSend.neighborID = newLink.router1.simulatedIPAddress;
+                helloMessageToSend = constructLSAUpdatePacket(SOSPFType.HELLO);
                 out.writeObject(helloMessageToSend);
 
                 //Recieve second HELLO
                 secondHelloMessageRecieved = (SOSPFPacket) in.readObject();
-                System.out.println("Recieved HELLO from " + secondHelloMessageRecieved.srcIP);
+                if (secondHelloMessageRecieved.sospfType != SOSPFType.HELLO) throw new Exception("Second HELLO message was never recieved");
+                else System.out.println("Recieved HELLO from " + secondHelloMessageRecieved.srcIP);
 
                 //set remote router to TWO_WAY
-                newLink.router2.status = RouterStatus.TWO_WAY;
+                link.router2.status = RouterStatus.TWO_WAY;
                 System.out.println("Set " + secondHelloMessageRecieved.srcIP + " state to TWO_WAY");
-            }
 
-            _serverHandlerIsRunning = true;
-            while(_serverHandlerIsRunning){
-                _serverHandlerIsRunning = false;
+                //Send first LSAUPDATE
+                lsaUpdatePacket = constructLSAUpdatePacket(SOSPFType.LinkStateUpdate);
+                addPacketToLinkQueues(lsaUpdatePacket);
+                lsaUpdatePacket = null;
+                
+                //Handle Remaining packets
+                _serverHandlerIsRunning = true;
+                while(_serverHandlerIsRunning){
+                    //Socket Writing Process
+                    try{
+                        link.lock.acquire();
+                        while (!link.PacketQueue.isEmpty()){
+                            outgoingPacket = link.PacketQueue.poll();
+                            if (outgoingPacket.sospfType != SOSPFType.HELLO) out.writeObject(outgoingPacket);
+                        }
+                    }catch(Exception e){
+                        System.err.println(e.toString());
+                        System.exit(1);
+                    }finally{
+                        link.lock.release();
+                    }
+                    
+                    //Socket Reading Process
+                    if (in.available() > 0){ //NOTE: Available does not tell us if we have our object of interest in the buffer, only if there is something to read
+                        incomingPacket = (SOSPFPacket) in.readObject();
+                        if (incomingPacket.sospfType == SOSPFType.LinkStateUpdate){
+                            // Update Database
+                            try{
+                                this._lsd.lock.acquire();
+                                HashMap<String, LSA> db = this._lsd.store;
+                                for (LSA lsa : incomingPacket.lsaArray){
+                                    if (db.containsKey(lsa.linkStateID)){
+                                        LSA previousLSA = db.get(lsa.linkStateID);
+                                        if (previousLSA.lsaSeqNumber <= lsa.lsaSeqNumber) db.replace(lsa.linkStateID, lsa);
+                                    } else db.put(lsa.linkStateID, lsa);
+                                }
+                            }catch(Exception e){
+                                System.err.println(e.toString());
+                                System.exit(1);
+                            }finally{
+                                this._lsd.lock.release();
+                            }
+    
+                            // Place in queues
+                            addPacketToLinkQueues(incomingPacket);
+                        }else if (incomingPacket.sospfType == SOSPFType.BYE){
+                            //TODO: HANDLE THREAD SAFETY WHEN NULLIFYING LINKS
+                            out.close();
+                            in.close();
+                            _socket.close();
+                            _serverHandlerIsRunning = false;
+                        }
+                    }
+                }
             }
-            _socket.close();
         }catch (Exception e){
             System.err.println(e.toString());
             System.exit(1);
@@ -106,8 +139,10 @@ public class ServerHandler implements Runnable {
 
     public ConnectionAvailability determineLinkAvailability(RouterDescription remoteRouter) {
         for (short i = 0; i < this._ports.length; i++) {
-            if (this._ports[i] == null) 
+            if (this._ports[i] == null){
+                this._linkIndex = i;
                 return ConnectionAvailability.AVAILABLE_PORT;
+            }
             else if (this._ports[i].router2.simulatedIPAddress.equals(remoteRouter.simulatedIPAddress)) 
                 return ConnectionAvailability.ALREADY_ATTACHED;
         }

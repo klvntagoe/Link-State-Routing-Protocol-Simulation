@@ -4,26 +4,32 @@ import socs.network.message.LSA;
 import socs.network.message.LinkDescription;
 
 import java.util.HashMap;
+import java.util.concurrent.Semaphore;
 
 public class LinkStateDatabase {
 
   //linkID => LSAInstance
-  HashMap<String, LSA> _store = new HashMap<String, LSA>();
+  HashMap<String, LSA> store = new HashMap<String, LSA>();
+
+  int sequenceNumber = Integer.MIN_VALUE + 1;
+
+  Semaphore lock = new Semaphore(1);
 
   private RouterDescription rd = null;
 
   public LinkStateDatabase(RouterDescription routerDescription) {
     rd = routerDescription;
     LSA l = initLinkStateDatabase();
-    _store.put(l.linkStateID, l);
+    store.put(l.linkStateID, l);
   }
 
   /**
    * output the shortest path from this router to the destination with the given IP address
    */
   String getShortestPath(String destinationIP) {
-    //TODO: fill the implementation here
-    return null;
+    StringBuilder s = new StringBuilder();
+    
+    return s.toString();
   }
 
   //initialize the linkstate database by adding an entry about the router itself
@@ -42,7 +48,7 @@ public class LinkStateDatabase {
 
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    for (LSA lsa: _store.values()) {
+    for (LSA lsa: store.values()) {
       sb.append(lsa.linkStateID).append("(" + lsa.lsaSeqNumber + ")").append(":\t");
       for (LinkDescription ld : lsa.links) {
         sb.append(ld.linkID).append(",").append(ld.portIndex).append(",").

@@ -23,7 +23,7 @@ public class Router {
     
     this.rd.simulatedIPAddress = config.getString("socs.network.router.ip");
 
-    port = (short) (Math.random() * 5000);
+    port = (short) ((Math.random() * (10000 - 1024)) + 1024);
     this.rd.processPortNumber = port;
 
     try{
@@ -53,7 +53,6 @@ public class Router {
    * NOTE: this command should not trigger link database synchronization
    */
   private void processAttach(String processIP, short processPort, String simulatedIP, short weight) {
-	  //TODO: Handle the weight input
     boolean alreadyAttached;
     int portIndex;
     RouterDescription remoteRouterDescription;
@@ -80,7 +79,7 @@ public class Router {
 	  
 	  //Success case
 	  remoteRouterDescription = new RouterDescription(processIP, processPort, simulatedIP);
-    this.ports[portIndex] = new Link(this.rd, remoteRouterDescription);
+    this.ports[portIndex] = new Link(this.rd, remoteRouterDescription, weight);
 
     System.out.println(this.rd.simulatedIPAddress +
       " is now attached to  " + 
@@ -93,11 +92,12 @@ public class Router {
   private void processStart() {
     Thread clientThread;
 
-    for (Link link : ports){
+    for (int i = 0; i < ports.length; i++){
+      Link link = ports[i];
       if (link == null) continue;
       if (link.router2.status == RouterStatus.TWO_WAY) continue;
       try{
-        clientThread = new Thread(new ClientHandler(lsd, link));
+        clientThread = new Thread(new ClientHandler(lsd, ports, i));
         clientThread.start();
       }catch(Exception e){
         System.err.println(e.toString());
@@ -134,6 +134,18 @@ public class Router {
    * @param destinationIP the ip adderss of the destination simulated router
    */
   private void processDetect(String destinationIP) {
+    //System.out.println(lsd.getShortestPath(destinationIP));
+    System.out.println(lsd.toString());
+  }
+
+  /**
+   * attach the link to the remote router, which is identified by the given simulated ip;
+   * to establish the connection via socket, you need to indentify the process IP and process Port;
+   * additionally, weight is the cost to transmitting data through the link
+   * <p/>
+   * This command does trigger the link database synchronization
+   */
+  private void processConnect(String processIP, short processPort, String simulatedIP, short weight) {
 
   }
 
@@ -144,18 +156,6 @@ public class Router {
    * @param portNumber the port number which the link attaches at
    */
   private void processDisconnect(short portNumber) {
-
-  }
-
-  /**
-   * attach the link to the remote router, which is identified by the given simulated ip;
-   * to establish the connection via socket, you need to indentify the process IP and process Port;
-   * additionally, weight is the cost to transmitting data through the link
-   * <p/>
-   * This command does trigger the link database synchronization
-   */
-  private void processConnect(String processIP, short processPort,
-                              String simulatedIP, short weight) {
 
   }
 
