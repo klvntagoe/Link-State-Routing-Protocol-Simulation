@@ -23,20 +23,19 @@ public class Server implements Runnable {
     }
 
     public void run(){
-        Socket server;
+        Socket socket;
         Thread clientServiceThread;
 
-        server = null;
         _serverIsRunning = true; 
         while(_serverIsRunning){
             if (NumberOfConnectedPorts() >= this._ports.length) continue;
             try {
-                server = _serverSocket.accept();
-                clientServiceThread = new Thread(new ServerHandler(server, this._rd, this._lsd, this._ports));
+                socket = _serverSocket.accept();
+                clientServiceThread = new Thread(new ServerHandler(socket, this._rd, this._lsd, this._ports));
                 clientServiceThread.start();
             } catch (Exception e){
                 System.err.println(e.toString());
-                System.exit(1);
+                //System.exit(1);
             }
         }
     }

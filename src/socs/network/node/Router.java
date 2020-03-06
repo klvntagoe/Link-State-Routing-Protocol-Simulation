@@ -31,7 +31,7 @@ public class Router {
       this._serverSocket = new ServerSocket(port);
     }catch(Exception e){
       System.err.println(e.toString());
-      System.exit(1);
+      //System.exit(1);
     }
 
     this.lsd = new LinkStateDatabase(this.rd);
@@ -97,11 +97,11 @@ public class Router {
       if (link == null) continue;
       if (link.router2.status == RouterStatus.TWO_WAY) continue;
       try{
-        clientThread = new Thread(new ClientHandler(lsd, ports, i));
+        clientThread = new Thread(new ClientHandler(rd, lsd, ports, i));
         clientThread.start();
       }catch(Exception e){
         System.err.println(e.toString());
-        System.exit(1);
+        //System.exit(1);
       }
     }
   }
@@ -122,7 +122,7 @@ public class Router {
       }
     }catch(Exception e){  //In case remote router decriptions is null
       System.err.println(e.toString());
-      System.exit(1);
+      //System.exit(1);
     }
   }
 
@@ -134,8 +134,8 @@ public class Router {
    * @param destinationIP the ip adderss of the destination simulated router
    */
   private void processDetect(String destinationIP) {
-    //System.out.println(lsd.getShortestPath(destinationIP));
-    System.out.println(lsd.toString());
+    //System.out.println(lsd.toString());
+    System.out.println(lsd.getShortestPath(destinationIP));
   }
 
   /**

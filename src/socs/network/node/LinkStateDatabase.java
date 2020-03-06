@@ -3,8 +3,8 @@ package socs.network.node;
 import socs.network.message.LSA;
 import socs.network.message.LinkDescription;
 
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.concurrent.Semaphore;
 
 public class LinkStateDatabase {
 
@@ -12,8 +12,6 @@ public class LinkStateDatabase {
   HashMap<String, LSA> store = new HashMap<String, LSA>();
 
   int sequenceNumber = Integer.MIN_VALUE + 1;
-
-  Semaphore lock = new Semaphore(1);
 
   private RouterDescription rd = null;
 
@@ -27,9 +25,37 @@ public class LinkStateDatabase {
    * output the shortest path from this router to the destination with the given IP address
    */
   String getShortestPath(String destinationIP) {
-    StringBuilder s = new StringBuilder();
+    WeightedGraph graph = WeightedGraph.LoadLinkStateDatabase(this.store);
+    if (graph == null) return "Link State Database is empty";
+    else{
+      if (destinationIP.equals(rd.simulatedIPAddress)) return "Destination IP Address = IP Address of this router (cost = 0)";
+      else{
+        ArrayList<String> path = graph.FindShortestPath(rd.simulatedIPAddress, destinationIP);
+        StringBuilder s = new StringBuilder();
     
-    return s.toString();
+        if (path.size() < 1) return "No shortest path found.";
+        else{
+          String current = rd.simulatedIPAddress;
+          s.append(current);
+    
+          while (path.size() >= 1){
+            int cost = graph.GetWeight(current, path.get(0));
+    
+            if (cost == Integer.MAX_VALUE) return "Error in calculating cost of adjacent nodes.";
+            else{
+              s.append(" ---(");
+              s.append(cost);
+              s.append(")--> ");
+    
+              current = path.remove(0);
+              s.append(current);
+            }
+          }
+          s.append("\n");
+        }
+        return s.toString();
+      }
+    }
   }
 
   //initialize the linkstate database by adding an entry about the router itself
