@@ -16,19 +16,18 @@ public class Router {
 
   private ServerSocket _serverSocket;
 
+  private boolean _routerIsRunning = false;
+
   public Router(Configuration config) {
     short port;
-    Thread serverThread;
-
-    
-    this.rd.simulatedIPAddress = config.getString("socs.network.router.ip");
-
-    port = (short) ((Math.random() * (10000 - 1024)) + 1024);
-    this.rd.processPortNumber = port;
 
     try{
+      this.rd.simulatedIPAddress = config.getString("socs.network.router.ip");
+  
+      port = (short) ((Math.random() * (10000 - 1024)) + 1024);
+      this.rd.processPortNumber = port;
+
       this.rd.processIPAddress = java.net.InetAddress.getLocalHost().getHostAddress();
-      this._serverSocket = new ServerSocket(port);
     }catch(Exception e){
       System.err.println(e.toString());
       //System.exit(1);
@@ -36,9 +35,6 @@ public class Router {
 
     this.lsd = new LinkStateDatabase(this.rd);
     
-    serverThread = new Thread(new Server(this._serverSocket, this.rd, this.lsd, this.ports));
-    serverThread.start();
-
     System.out.println("New router instantiated with " + 
       "IP " + this.rd.processIPAddress + 
     	", Port: " + this.rd.processPortNumber +
@@ -91,6 +87,22 @@ public class Router {
    */
   private void processStart() {
     Thread clientThread;
+
+    if (!this._routerIsRunning){
+      Thread serverThread;
+
+      try{
+        this._serverSocket = new ServerSocket(this.rd.processPortNumber);
+      }catch(Exception e){
+        System.err.println(e.toString());
+        //System.exit(1);
+      }
+
+      serverThread = new Thread(new Server(this._serverSocket, this.rd, this.lsd, this.ports));
+      serverThread.start();
+      
+      this._routerIsRunning = true;
+    }
 
     for (int i = 0; i < ports.length; i++){
       Link link = ports[i];
