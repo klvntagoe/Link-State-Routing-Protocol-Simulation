@@ -4,6 +4,7 @@ import socs.network.util.Configuration;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.net.ConnectException;
 import java.net.ServerSocket;
 
 public class Router {
@@ -100,8 +101,9 @@ public class Router {
 
       serverThread = new Thread(new Server(this._serverSocket, this.rd, this.lsd, this.ports));
       serverThread.start();
-      
+
       this._routerIsRunning = true;
+      System.out.println("This router is now running.");
     }
 
     for (int i = 0; i < ports.length; i++){
@@ -122,19 +124,22 @@ public class Router {
    * output the neighbors of the routers
    */
   private void processNeighbors() {
-    int neigborCount = 0;
-    try{
-      for (Link link : this.ports){
-        if (link == null) continue;
-        if (link.router2.status != RouterStatus.TWO_WAY) continue;
-        neigborCount++;
-        System.out.println("IP Address of Neigbor " + 
-          neigborCount + ": " + 
-          link.router2.simulatedIPAddress);
+    if (!this._routerIsRunning) System.out.println("This router has not started yet.");
+    else{
+      int neigborCount = 0;
+      try{
+        for (Link link : this.ports){
+          if (link == null) continue;
+          if (link.router2.status != RouterStatus.TWO_WAY) continue;
+          neigborCount++;
+          System.out.println("IP Address of Neigbor " + 
+            neigborCount + ": " + 
+            link.router2.simulatedIPAddress);
+        }
+      }catch(Exception e){  //In case remote router decriptions is null
+        System.err.println(e.toString());
+        //System.exit(1);
       }
-    }catch(Exception e){  //In case remote router decriptions is null
-      System.err.println(e.toString());
-      //System.exit(1);
     }
   }
 
@@ -146,8 +151,11 @@ public class Router {
    * @param destinationIP the ip adderss of the destination simulated router
    */
   private void processDetect(String destinationIP) {
-    //System.out.println(lsd.toString());
-    System.out.println(lsd.getShortestPath(destinationIP));
+    if (!this._routerIsRunning) System.out.println("This router has not started yet.");
+    else{
+      //System.out.println(lsd.toString());
+      System.out.println(lsd.getShortestPath(destinationIP));
+    }
   }
 
   /**
@@ -156,9 +164,39 @@ public class Router {
    * additionally, weight is the cost to transmitting data through the link
    * <p/>
    * This command does trigger the link database synchronization
-   */
+  */
+   
   private void processConnect(String processIP, short processPort, String simulatedIP, short weight) {
-
+    if (!this._routerIsRunning) System.out.println("This router has not started yet.");
+    else{
+      boolean alreadyAttached = false;
+      int portIndex = -1;
+      Thread clientThread;
+      
+      for (int i = 0; i < this.ports.length && !alreadyAttached && portIndex < 0; i++){
+        Link candidate = this.ports[i];
+        if (candidate == null)
+          portIndex = i;
+        else if (candidate.router2.simulatedIPAddress.equals(simulatedIP) || candidate.router2.processPortNumber == processPort) 
+          alreadyAttached = true;
+      }
+      if (alreadyAttached){
+        System.out.println(simulatedIP + " is already attached to this router.");
+        return;
+      }
+      if (portIndex < 0){
+        System.out.println("This router has no available ports to allow for a new connection.");
+        return;
+      }
+      this.ports[portIndex] = new Link(this.rd, new RouterDescription(processIP, processPort, simulatedIP), weight);
+      try{
+        clientThread = new Thread(new ClientHandler(rd, lsd, ports, portIndex));
+        clientThread.start();
+      }catch(Exception e){
+        System.err.println(e.toString());
+        //System.exit(1);
+      }
+    }
   }
 
   /**
@@ -168,14 +206,32 @@ public class Router {
    * @param portNumber the port number which the link attaches at
    */
   private void processDisconnect(short portNumber) {
-
+    if (!this._routerIsRunning) System.out.println("This router has not started yet.");
+    else{
+      int portIndex = -1;
+      for (int i = 0; i < this.ports.length && portIndex < 0; i++){
+        Link candidate = this.ports[i];
+        if (candidate == null) continue;
+        if (candidate.router2.processPortNumber == portNumber) portIndex = i;
+      }
+      if (portIndex < 0){
+        System.out.println("This router does not have a link with port number = " + portNumber + ".");
+      }
+      //Run a thread to boradcast a disconnection link and nullify port
+    }
   }
 
   /**
    * disconnect with all neighbors and quit the program
    */
   private void processQuit() {
+    for (Link link : this.ports){
+      if (link == null) continue;
+      //Run a thread to boradcast a disconnection link and nullify port
 
+    }
+    this._routerIsRunning = false;
+    System.exit(0);
   }
 
   public void terminal() {
@@ -197,14 +253,13 @@ public class Router {
           String[] cmdLine = command.split(" ");
           processAttach(cmdLine[1], Short.parseShort(cmdLine[2]),
                   cmdLine[3], Short.parseShort(cmdLine[4]));
-        } else if (command.equals("start")) {
-          processStart();
-        } else if (command.equals("connect ")) {
+        } else if (command.startsWith("connect ")) {
           String[] cmdLine = command.split(" ");
           processConnect(cmdLine[1], Short.parseShort(cmdLine[2]),
                   cmdLine[3], Short.parseShort(cmdLine[4]));
+        } else if (command.equals("start")) {
+          processStart();
         } else if (command.equals("neighbors")) {
-          //output neighbors
           processNeighbors();
         } else {
           //invalid command
