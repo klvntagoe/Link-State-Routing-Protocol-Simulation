@@ -1,11 +1,15 @@
 package socs.network.node;
 
+import socs.network.message.SOSPFPacket;
+import socs.network.message.SOSPFType;
 import socs.network.util.Configuration;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.net.ConnectException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
+import java.net.Socket;
 
 public class Router {
 
@@ -153,7 +157,7 @@ public class Router {
   private void processDetect(String destinationIP) {
     if (!this._routerIsRunning) System.out.println("This router has not started yet.");
     else{
-      //System.out.println(lsd.toString());
+      System.out.println(lsd.toString());
       System.out.println(lsd.getShortestPath(destinationIP));
     }
   }
@@ -206,6 +210,12 @@ public class Router {
    * @param portNumber the port number which the link attaches at
    */
   private void processDisconnect(short portNumber) {
+    Link link;
+    ObjectInputStream in;
+    ObjectOutputStream out;
+    Socket socket;
+    SOSPFPacket packet, acknowledgmentPacket;
+
     if (!this._routerIsRunning) System.out.println("This router has not started yet.");
     else{
       int portIndex = -1;
@@ -217,7 +227,28 @@ public class Router {
       if (portIndex < 0){
         System.out.println("This router does not have a link with port number = " + portNumber + ".");
       }
-      //Run a thread to boradcast a disconnection link and nullify port
+      link = this.ports[portIndex];
+      packet = NetworkHelper.constructByePacketToBroadcast(link);
+      try{
+          socket = new Socket(link.router2.processIPAddress, link.router2.processPortNumber);
+          out = new ObjectOutputStream(socket.getOutputStream());
+
+          out.writeObject(packet);
+
+          in = new ObjectInputStream(socket.getInputStream());
+          acknowledgmentPacket = (SOSPFPacket) in.readObject();
+
+          in.close();
+          out.close();
+          socket.close();
+      }catch(Exception e){
+          System.err.println(e.toString());
+          //System.exit(1);
+      }
+      System.out.printf("Connection with %s is now terminated.\n", link.router2.simulatedIPAddress);
+      this.ports[portIndex] = null;
+      NetworkHelper.UpdateDatabaseWithNewRouterInformation(this.rd, this.ports, this.lsd);
+      NetworkHelper.BroadcastLSA(this.rd, this.ports, this.lsd);
     }
   }
 
@@ -225,11 +256,34 @@ public class Router {
    * disconnect with all neighbors and quit the program
    */
   private void processQuit() {
+    ObjectInputStream in;
+    ObjectOutputStream out;
+    Socket socket;
+    SOSPFPacket packet, acknowledgmentPacket;
+
     for (Link link : this.ports){
       if (link == null) continue;
-      //Run a thread to boradcast a disconnection link and nullify port
+      packet = NetworkHelper.constructByePacketToBroadcast(link);
+      try{
+          socket = new Socket(link.router2.processIPAddress, link.router2.processPortNumber);
+          out = new ObjectOutputStream(socket.getOutputStream());
 
+          out.writeObject(packet);
+
+          in = new ObjectInputStream(socket.getInputStream());
+          acknowledgmentPacket = (SOSPFPacket) in.readObject();
+
+          in.close();
+          out.close();
+          socket.close();
+      }catch(Exception e){
+          System.err.println(e.toString());
+          //System.exit(1);
+      }
+      System.out.printf("Connection with %s is now terminated.\n", link.router2.simulatedIPAddress);
+      link = null;
     }
+    System.out.println("All connections closed. Router is shutting down.");
     this._routerIsRunning = false;
     System.exit(0);
   }

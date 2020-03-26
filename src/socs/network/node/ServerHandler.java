@@ -65,7 +65,7 @@ public class ServerHandler extends Handler {
                     System.out.println("Set " + firstHelloMessageRecieved.srcIP + " state to INIT");
     
                     //Send first HELLO
-                    helloMessageToSend = constructLSAPacketToBroadcast(SOSPFType.HELLO, link);
+                    helloMessageToSend = NetworkHelper.constructHelloPacketToBroadcast(this._rd, this._ports, link, this._lsd);
                     out.writeObject(helloMessageToSend);
     
                     //Recieve second HELLO
@@ -83,13 +83,15 @@ public class ServerHandler extends Handler {
                     _socket.close();
 
                     //Update Database
-                    UpdateDatabaseWithNewRouterInformation();
+                    NetworkHelper.UpdateDatabaseWithNewRouterInformation(this._rd, this._ports, this._lsd);
                     UpdateDatabase(secondHelloMessageRecieved);
 
                     //Forward LSA                  
                     ForwardLSA(secondHelloMessageRecieved);  
                 }
             }else if (incomingPacket.sospfType == SOSPFType.LinkStateUpdate){
+                System.out.printf("Recieved a link state update from %s\n", incomingPacket.routerID);
+
                 //Askowledge LSA Packet
                 out.writeObject(new SOSPFPacket());
 
@@ -98,6 +100,25 @@ public class ServerHandler extends Handler {
 
                 //Forward LSA 
                 ForwardLSA(incomingPacket);
+
+            } else if (incomingPacket.sospfType == SOSPFType.BYE){
+                System.out.printf("Recieved a disconnection notice from %s\n", incomingPacket.routerID);
+
+                //Askowledge LSA Packet
+                out.writeObject(new SOSPFPacket());
+
+                int port = FindPortIndex(incomingPacket.srcIP);
+                if (port >= 0 && port < this._ports.length){
+
+                    //Nullify link
+                    this._ports[FindPortIndex(incomingPacket.srcIP)] = null;
+
+                    //Update Database
+                    NetworkHelper.UpdateDatabaseWithNewRouterInformation(this._rd, this._ports, this._lsd);
+                    
+                    //Forward LSA                  
+                    NetworkHelper.BroadcastLSA(this._rd, this._ports, this._lsd);  
+                }
             }
         }catch (Exception e){
             System.err.println(e.toString());
@@ -127,5 +148,12 @@ public class ServerHandler extends Handler {
                 alreadyAttached = true;
         }
         return portIndex;
+    }
+
+    public int FindPortIndex(String IPAddress){
+        for (int i = 0; i < this._ports.length; i++){
+            if (this._ports[i].router2.simulatedIPAddress.equals(IPAddress)) return i;
+        }
+        return -1;
     }
 }

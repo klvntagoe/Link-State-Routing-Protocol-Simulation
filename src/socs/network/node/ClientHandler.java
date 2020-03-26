@@ -1,6 +1,5 @@
 package socs.network.node;
 
-import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.ConnectException;
@@ -30,7 +29,7 @@ public class ClientHandler extends Handler {
             in = new ObjectInputStream(socket.getInputStream());
 
             // Send First Hello
-            helloMessageToSend = constructLSAPacketToBroadcast(SOSPFType.HELLO, link);
+            helloMessageToSend = NetworkHelper.constructHelloPacketToBroadcast(this._rd, this._ports, link, this._lsd);
             out.writeObject(helloMessageToSend);
 
             // Recieve First Hello
@@ -56,7 +55,7 @@ public class ClientHandler extends Handler {
             socket.close();
 
             // Update Database
-            UpdateDatabaseWithNewRouterInformation();
+            NetworkHelper.UpdateDatabaseWithNewRouterInformation(this._rd, this._ports, this._lsd);
             UpdateDatabase(helloMessageRecieved);
 
             // broadcast frist LSA

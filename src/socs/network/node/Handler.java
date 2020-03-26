@@ -33,17 +33,6 @@ public abstract class Handler implements Runnable {
         this._linkIndex = index;
     }
 
-    public void UpdateDatabaseWithNewRouterInformation(){
-        HashMap<String, LSA> db;
-        LSA lsa;
-        db = this._lsd.store;
-        lsa = constructLSA();
-        if (db.containsKey(lsa.linkStateID)){
-            LSA previousLSA = db.get(lsa.linkStateID);
-            if (previousLSA.lsaSeqNumber <= lsa.lsaSeqNumber) db.replace(lsa.linkStateID, lsa);
-        } else db.put(lsa.linkStateID, lsa);
-    }
-
     public void UpdateDatabase(SOSPFPacket packet){
         HashMap<String, LSA> db = this._lsd.store;
         for (LSA lsa : packet.lsaArray){
@@ -53,71 +42,6 @@ public abstract class Handler implements Runnable {
             } else db.put(lsa.linkStateID, lsa);
         }
 
-    }
-
-    public void BroadcastLSA(){
-        Link link;
-        ObjectOutputStream out;
-        Socket socket;
-        SOSPFPacket lsaPacket;
-
-        for (int i = 0; i < this._ports.length; i++){
-            link = this._ports[i];
-
-            if (link == null) continue;
-            
-            lsaPacket = constructLSAPacketToBroadcast(SOSPFType.LinkStateUpdate, link);
-            try{
-                socket = new Socket(link.router2.processIPAddress, link.router2.processPortNumber);
-                out = new ObjectOutputStream(socket.getOutputStream());
-
-                out.writeObject(lsaPacket);
-
-                out.close();
-                socket.close();
-            }catch(Exception e){
-                System.err.println(e.toString());
-                //System.exit(1);
-            }
-        }
-    }
-
-    public SOSPFPacket constructLSAPacketToBroadcast(SOSPFType packetType, Link currentLink){
-        SOSPFPacket packet = new SOSPFPacket();
-        
-        packet.srcProcessIP = currentLink.router1.processIPAddress;
-        packet.srcProcessPort = currentLink.router1.processPortNumber;
-
-        packet.srcIP = currentLink.router1.simulatedIPAddress;
-        packet.dstIP = currentLink.router2.simulatedIPAddress;
-
-        packet.sospfType = packetType;
-        packet.routerID = currentLink.router1.simulatedIPAddress;
-        packet.neighborID = currentLink.router1.simulatedIPAddress;
-
-        if (packetType == SOSPFType.HELLO) packet.cost = currentLink.cost;
-        
-        packet.lsaArray.add(constructLSA());
-        
-        return packet;
-    }
-
-    public LSA constructLSA(){
-        LSA linkStateAdvertisement = new LSA();
-        linkStateAdvertisement.linkStateID = this._rd.simulatedIPAddress;
-        linkStateAdvertisement.lsaSeqNumber = _lsd.sequenceNumber;
-        _lsd.sequenceNumber++;
-        for (Link link : this._ports){
-            if (link == null) continue;
-            
-            LinkDescription linkDescription = new LinkDescription();
-            linkDescription.linkID = link.router2.simulatedIPAddress;
-            linkDescription.portIndex = link.router2.processPortNumber;
-            linkDescription.tosMetrics = link.cost;
-            
-            linkStateAdvertisement.links.add(linkDescription);
-        }
-        return linkStateAdvertisement;
     }
 
     public void ForwardLSA(SOSPFPacket packet){
