@@ -22,7 +22,7 @@ public class ServerHandler extends Handler {
         ObjectInputStream in;
         ObjectOutputStream out;
         RouterDescription newClient;
-        SOSPFPacket incomingPacket, firstHelloMessageRecieved, secondHelloMessageRecieved, helloMessageToSend;
+        SOSPFPacket incomingPacket, packetToForward, firstHelloMessageRecieved, secondHelloMessageRecieved, helloMessageToSend;
         
         try{
             in = new ObjectInputStream(_socket.getInputStream());
@@ -84,25 +84,25 @@ public class ServerHandler extends Handler {
 
                     //Update Database
                     NetworkHelper.UpdateDatabaseWithNewRouterInformation(this._rd, this._ports, this._lsd);
-                    UpdateDatabase(secondHelloMessageRecieved);
+                    NetworkHelper.UpdateDatabase(this._lsd, secondHelloMessageRecieved);
 
-                    //Forward LSA                  
-                    ForwardLSA(secondHelloMessageRecieved);  
+                    //Forward LSA              
+                    ForwardLSA(NetworkHelper.constructUpdatePacketToBroadcast(this._rd, this._ports, this._linkIndex, this._lsd), secondHelloMessageRecieved.srcIP);  
                 }
             }else if (incomingPacket.sospfType == SOSPFType.LinkStateUpdate){
-                System.out.printf("Recieved a link state update from %s\n", incomingPacket.routerID);
+                System.out.printf("Recieved a link state update from %s.\n", incomingPacket.routerID);
 
                 //Askowledge LSA Packet
                 out.writeObject(new SOSPFPacket());
 
                 //Update Database
-                UpdateDatabase(incomingPacket);
+                NetworkHelper.UpdateDatabase(this._lsd, incomingPacket);
 
                 //Forward LSA 
-                ForwardLSA(incomingPacket);
+                ForwardLSA(incomingPacket, incomingPacket.srcIP);
 
             } else if (incomingPacket.sospfType == SOSPFType.BYE){
-                System.out.printf("Recieved a disconnection notice from %s\n", incomingPacket.routerID);
+                System.out.printf("Recieved a disconnection notice from %s.\n", incomingPacket.routerID);
 
                 //Askowledge LSA Packet
                 out.writeObject(new SOSPFPacket());
@@ -116,8 +116,8 @@ public class ServerHandler extends Handler {
                     //Update Database
                     NetworkHelper.UpdateDatabaseWithNewRouterInformation(this._rd, this._ports, this._lsd);
                     
-                    //Forward LSA                  
-                    NetworkHelper.BroadcastLSA(this._rd, this._ports, this._lsd);  
+                    //Forward LSA
+                    NetworkHelper.BroadcastLSA(this._rd, this._ports, this._lsd); 
                 }
             }
         }catch (Exception e){

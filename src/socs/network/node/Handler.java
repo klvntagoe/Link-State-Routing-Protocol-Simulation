@@ -3,10 +3,6 @@ package socs.network.node;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
-import java.util.HashMap;
-
-import socs.network.message.LSA;
-import socs.network.message.LinkDescription;
 import socs.network.message.SOSPFPacket;
 import socs.network.message.SOSPFType;
 
@@ -33,18 +29,7 @@ public abstract class Handler implements Runnable {
         this._linkIndex = index;
     }
 
-    public void UpdateDatabase(SOSPFPacket packet){
-        HashMap<String, LSA> db = this._lsd.store;
-        for (LSA lsa : packet.lsaArray){
-            if (db.containsKey(lsa.linkStateID)){
-                LSA previousLSA = db.get(lsa.linkStateID);
-                if (previousLSA.lsaSeqNumber <= lsa.lsaSeqNumber) db.replace(lsa.linkStateID, lsa);
-            } else db.put(lsa.linkStateID, lsa);
-        }
-
-    }
-
-    public void ForwardLSA(SOSPFPacket packet){
+    public void ForwardLSA(SOSPFPacket packet, String ingressIP){
         Link link;
         ObjectInputStream in;
         ObjectOutputStream out;
@@ -54,7 +39,7 @@ public abstract class Handler implements Runnable {
         for (int i = 0; i < this._ports.length; i++){
             link = this._ports[i];
             if (link == null) continue;
-            if (link.router2.simulatedIPAddress.equals(packet.srcIP)) continue;
+            if (link.router2.simulatedIPAddress.equals(ingressIP)) continue;
             
             packetToForward = constructLSAPacketToForward(packet, link);
             try{

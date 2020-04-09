@@ -56,10 +56,10 @@ public class ClientHandler extends Handler {
 
             // Update Database
             NetworkHelper.UpdateDatabaseWithNewRouterInformation(this._rd, this._ports, this._lsd);
-            UpdateDatabase(helloMessageRecieved);
+            NetworkHelper.UpdateDatabase(this._lsd, helloMessageRecieved);
 
             // broadcast frist LSA
-            ForwardLSA(helloMessageRecieved);
+            ForwardLSA(NetworkHelper.constructUpdatePacketToBroadcast(this._rd, this._ports, this._linkIndex, this._lsd), helloMessageRecieved.srcIP);
         } catch (ConnectException e) {
             System.err.printf("The router with IP address %s is not listening to it's port.\n",
                     this._ports[this._linkIndex].router2.simulatedIPAddress);

@@ -4,6 +4,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.HashMap;
+import java.util.HashSet;
 
 import socs.network.message.LSA;
 import socs.network.message.LinkDescription;
@@ -11,16 +12,48 @@ import socs.network.message.SOSPFPacket;
 import socs.network.message.SOSPFType;
 
 public class NetworkHelper {
+
+    public static void UpdateDatabase(LinkStateDatabase lsd, SOSPFPacket packet){
+        HashMap<String, LSA> db = lsd.store;
+        for (LSA currentLsa : packet.lsaArray){
+            if (db.containsKey(currentLsa.linkStateID)){
+                LSA previousLsa = db.get(currentLsa.linkStateID);
+                if (previousLsa.lsaSeqNumber <= currentLsa.lsaSeqNumber) {
+                    RemoveStaleLinksFromDatabase(lsd, previousLsa, currentLsa);
+                    db.replace(currentLsa.linkStateID, currentLsa);
+                }
+            } else db.put(currentLsa.linkStateID, currentLsa);
+        }
+    }
+
     public static void UpdateDatabaseWithNewRouterInformation(RouterDescription rd, Link[] ports, LinkStateDatabase lsd){
         HashMap<String, LSA> db;
-        LSA lsa;
+        LSA currentLsa, previousLsa;
+
         db = lsd.store;
-        lsa = constructLSA(rd, ports, lsd);
-        // if (db.containsKey(lsa.linkStateID)){
-        //     LSA previousLSA = db.get(lsa.linkStateID);
-        //     if (previousLSA.lsaSeqNumber <= lsa.lsaSeqNumber) db.replace(lsa.linkStateID, lsa);
-        // } else db.put(lsa.linkStateID, lsa);
-        db.put(lsa.linkStateID, lsa);
+        previousLsa = db.get(rd.simulatedIPAddress);
+        currentLsa = constructLSA(rd, ports, lsd);
+        
+        RemoveStaleLinksFromDatabase(lsd, previousLsa, currentLsa);
+        db.replace(currentLsa.linkStateID, currentLsa);
+    }
+
+    public static void RemoveStaleLinksFromDatabase(LinkStateDatabase lsd, LSA previousLsa, LSA currentLsa){
+        HashMap<String, LSA> db;
+        HashSet<String> currentLinks;
+
+        db = lsd.store;
+        currentLinks = new HashSet<String>();
+        currentLinks.add(currentLsa.linkStateID);
+
+        if (db.containsKey(currentLsa.linkStateID)){
+            //Identify all new links
+            for (LinkDescription linkDescription : currentLsa.links) currentLinks.add(linkDescription.linkID);
+
+            //Remove link information if not found in current links
+            for (LinkDescription linkDescription : previousLsa.links)
+                if (!currentLinks.contains(linkDescription.linkID)) db.remove(linkDescription.linkID);
+        }
     }
 
     public static void BroadcastLSA(RouterDescription rd, Link[] ports, LinkStateDatabase lsd){

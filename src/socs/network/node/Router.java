@@ -1,7 +1,6 @@
 package socs.network.node;
 
 import socs.network.message.SOSPFPacket;
-import socs.network.message.SOSPFType;
 import socs.network.util.Configuration;
 
 import java.io.BufferedReader;
@@ -303,6 +302,7 @@ public class Router {
           processDisconnect(Short.parseShort(cmdLine[1]));
         } else if (command.startsWith("quit")) {
           processQuit();
+          break;
         } else if (command.startsWith("attach ")) {
           String[] cmdLine = command.split(" ");
           processAttach(cmdLine[1], Short.parseShort(cmdLine[2]),
@@ -316,8 +316,7 @@ public class Router {
         } else if (command.equals("neighbors")) {
           processNeighbors();
         } else {
-          //invalid command
-          break;
+          System.out.printf("Invalid command: %s\n", command);
         }
         System.out.print(">> ");
         command = br.readLine();
