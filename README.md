@@ -26,8 +26,8 @@ Outputs the routing path from current router to the destination router which is 
 #### neighbors:<br>
 Outputs the Simulated IP Addresses of all neighbors of the current router.
 
-#### disconnect [Port Number]:<br>
-Remove the link between current router and the remote one which is connected at port [Port Number] (port number is between 0 - 3, i.e. four links in the router). Through this command, you are triggering the synchronization of Link State Database by sending LSAUPDATE message to all neighbors in the topology.
+#### disconnect [Simulated IP Address]:<br>
+Remove the link between current router and the remote one which has IP address [Simulated IP Address]. Through this command, you are triggering the synchronization of Link State Database by sending LSAUPDATE message to all neighbors in the topology.
 
 #### quit:
 Exit the program. NOTE, this will trigger the synchronization of link state database.

@@ -156,7 +156,7 @@ public class Router {
   private void processDetect(String destinationIP) {
     if (!this._routerIsRunning) System.out.println("This router has not started yet.");
     else{
-      System.out.println(lsd.toString());
+      //System.out.println(lsd.toString());
       System.out.println(lsd.getShortestPath(destinationIP));
     }
   }
@@ -208,7 +208,7 @@ public class Router {
    *
    * @param portNumber the port number which the link attaches at
    */
-  private void processDisconnect(short portNumber) {
+  private void processDisconnect(String simulatedIPAddress) {
     Link link;
     ObjectInputStream in;
     ObjectOutputStream out;
@@ -221,10 +221,10 @@ public class Router {
       for (int i = 0; i < this.ports.length && portIndex < 0; i++){
         Link candidate = this.ports[i];
         if (candidate == null) continue;
-        if (candidate.router2.processPortNumber == portNumber) portIndex = i;
+        if (candidate.router2.simulatedIPAddress.equals(simulatedIPAddress)) portIndex = i;
       }
       if (portIndex < 0){
-        System.out.println("This router does not have a link with port number = " + portNumber + ".");
+        System.out.println("This router does not have a link with IP Address = " + simulatedIPAddress + ".");
       }
       link = this.ports[portIndex];
       packet = NetworkHelper.constructByePacketToBroadcast(link);
@@ -299,7 +299,7 @@ public class Router {
           processDetect(cmdLine[1]);
         } else if (command.startsWith("disconnect ")) {
           String[] cmdLine = command.split(" ");
-          processDisconnect(Short.parseShort(cmdLine[1]));
+          processDisconnect(cmdLine[1]);
         } else if (command.startsWith("quit")) {
           processQuit();
           break;
