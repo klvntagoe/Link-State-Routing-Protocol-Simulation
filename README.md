@@ -14,20 +14,20 @@ java -jar target/Link-State-Routing-Protocol-1.0-jar-with-dependencies.jar conf/
 ```
 
 ## Commands:
-#### attach [Process IP] [Process Port] [IP Address] [Link Weight]: <br>
-Establishes a link to the remote router which is identified by [IP Address]. This command does not actually instantiates the TCP communication to the proposed routers to connect to.
+#### attach [Process IP] [Process Port] [Simulated IP Address] [Link Weight]: <br>
+Establishes a link to the remote router which is identified by [Simulated IP Address].
 
 #### start:<br>
-Start this router and initialize the database synchronization process. After you establish the links by running attach , you will run start command to send HELLO messages and LSAUPDATE to all connected routers for the Link State Database synchronization. This command can only be run after start.
+Starts current router and initialize the database synchronization process. After links are established by running attach, you can run this again to send TCP three-way handshakes and LSAUPDATEs to all connected routers for the Link State Database synchronization.
 
-#### detect [IP Address]:<br>
-Output the routing path from this router to the destination router which is identified by [IP Address].
+#### detect [Simulated IP Address]:<br>
+Outputs the routing path from current router to the destination router which is identified by [Simulated IP Address].
 
 #### neighbors:<br>
-Output the IP Addresses of all neighbors of the router where you run this command.
+Outputs the Simulated IP Addresses of all neighbors of the current router.
 
 #### disconnect [Port Number]:<br>
-Remove the link between this router and the remote one which is connected at port [Port Number] (port number is between 0 - 3, i.e. four links in the router). Through this command, you are triggering the synchronization of Link State Database by sending LSAUPDATE message to all neighbors in the topology.
+Remove the link between current router and the remote one which is connected at port [Port Number] (port number is between 0 - 3, i.e. four links in the router). Through this command, you are triggering the synchronization of Link State Database by sending LSAUPDATE message to all neighbors in the topology.
 
 #### quit:
 Exit the program. NOTE, this will trigger the synchronization of link state database.
