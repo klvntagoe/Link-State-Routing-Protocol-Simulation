@@ -2,7 +2,6 @@ package socs.network.message;
 
 import java.io.*;
 import java.util.Vector;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class SOSPFPacket implements Serializable {
 
@@ -15,7 +14,7 @@ public class SOSPFPacket implements Serializable {
   public String dstIP;
 
   //common header
-  public short sospfType; //0 - HELLO, 1 - LinkState Update
+  public SOSPFType sospfType;
   public String routerID;
 
   //used by HELLO message to identify the sender of the message
@@ -23,7 +22,10 @@ public class SOSPFPacket implements Serializable {
   //simulated IP address
   public String neighborID; //neighbor's simulated IP address
 
+  //used by HELLO
+  public int cost = Integer.MAX_VALUE;
+
   //used by LSAUPDATE
-  public Vector<LSA> lsaArray = null;
+  public Vector<LSA> lsaArray = new Vector<LSA>();
 
 }
