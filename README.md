@@ -1,5 +1,18 @@
 # Link-State-Routing-Protocol-Simulation
 
+## Requirements
+* [Maven](https://maven.apache.org/)
+
+## Instructions:
+* To compile application:
+```bash
+mvn compile assembly:single
+```
+* To run one of the predefined routers (example router 1):
+```bash
+java -jar target/Link-State-Routing-Protocol-1.0-jar-with-dependencies.jar conf/router1.conf
+```
+
 ## Commands:
 #### attach [Process IP] [Process Port] [IP Address] [Link Weight]: <br>
 Establishes a link to the remote router which is identified by [IP Address]. This command does not actually instantiates the TCP communication to the proposed routers to connect to.
