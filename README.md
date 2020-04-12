@@ -26,6 +26,10 @@ Outputs the routing path from current router to the destination router which is 
 #### neighbors:<br>
 Outputs the Simulated IP Addresses of all neighbors of the current router.
 
+#### connect [Process IP] [Process Port] [IP Address] [Link Weight]: <br>
+Similar to attach command, but it directly triggers the database synchronization without the necessary to
+run start again (this command can only be run after router has started).
+
 #### disconnect [Simulated IP Address]:<br>
 Remove the link between current router and the remote one which has IP address [Simulated IP Address]. Through this command, you are triggering the synchronization of Link State Database by sending LSAUPDATE message to all neighbors in the topology.
 
