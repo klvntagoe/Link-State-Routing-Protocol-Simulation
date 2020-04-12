@@ -26,7 +26,7 @@ Outputs the routing path from current router to the destination router which is 
 #### neighbors:<br>
 Outputs the Simulated IP Addresses of all neighbors of the current router.
 
-#### connect [Process IP] [Process Port] [IP Address] [Link Weight]: <br>
+#### connect [Process IP] [Process Port] [Simulated IP Address] [Link Weight]: <br>
 Similar to attach command, but it directly triggers the database synchronization without the necessary to
 run start again (this command can only be run after router has started).
 
